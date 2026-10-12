@@ -1,0 +1,154 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document containing authentication metadata and current plan tier.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique Firebase Auth user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "Display name of the user" },
+        "photoURL": { "type": "string", "description": "Profile avatar URL" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "Authorization role" },
+        "planId": { "type": "string", "enum": ["free", "pro", "team", "business"], "description": "Current subscription tier" },
+        "seats": { "type": "number", "description": "Team member seats allocated" },
+        "createdAt": { "type": "string", "description": "Account registration timestamp" }
+      },
+      "required": ["uid", "email", "role", "planId", "createdAt"]
+    },
+    "UserEntitlements": {
+      "title": "UserEntitlements",
+      "description": "Operational quotas and subscription limits for PDF operations and Gemini AI requests.",
+      "type": "object",
+      "properties": {
+        "pdfOperationsUsed": { "type": "number", "description": "PDF operations executed in current billing cycle" },
+        "pdfOperationsLimit": { "type": "number", "description": "Maximum PDF operations allowed" },
+        "aiQueriesUsed": { "type": "number", "description": "Gemini AI queries consumed" },
+        "aiQueriesLimit": { "type": "number", "description": "Maximum Gemini AI queries allowed" },
+        "subscriptionStatus": { "type": "string", "enum": ["free", "active", "canceled", "past_due"], "description": "Stripe subscription state" },
+        "billingCycle": { "type": "string", "enum": ["monthly", "annual"], "description": "Billing cadence" }
+      },
+      "required": ["pdfOperationsUsed", "pdfOperationsLimit", "aiQueriesUsed", "aiQueriesLimit", "subscriptionStatus", "billingCycle"]
+    },
+    "ProcessedDocument": {
+      "title": "ProcessedDocument",
+      "description": "Metadata for documents processed via Swahivo PDF tools.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Document record ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "name": { "type": "string", "description": "Document file name" },
+        "size": { "type": "number", "description": "Document size in bytes" },
+        "toolUsed": { "type": "string", "description": "PDF tool or operation applied" },
+        "status": { "type": "string", "enum": ["completed", "processing", "failed"], "description": "Processing status" },
+        "createdAt": { "type": "string", "description": "Timestamp string of creation" },
+        "pageCount": { "type": "number", "description": "Page count of document" },
+        "blobDataUrl": { "type": "string", "description": "Optional data URL" }
+      },
+      "required": ["id", "userId", "name", "size", "toolUsed", "status", "createdAt"]
+    },
+    "AiConversation": {
+      "title": "AiConversation",
+      "description": "Interactive Gemini AI document chat and reasoning logs.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Conversation thread ID" },
+        "userId": { "type": "string", "description": "Owner user ID" },
+        "title": { "type": "string", "description": "Conversation topic title" },
+        "documentName": { "type": "string", "description": "Source document title" },
+        "messages": { "type": "array", "description": "Message history objects" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last message timestamp" }
+      },
+      "required": ["id", "userId", "title", "createdAt"]
+    },
+    "UsageEvent": {
+      "title": "UsageEvent",
+      "description": "System audit telemetry and usage logging events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Event ID" },
+        "userId": { "type": "string", "description": "User ID who triggered the action" },
+        "type": { "type": "string", "description": "Event category e.g. AUTH, AI_API, PDF_OP" },
+        "details": { "type": "string", "description": "Event message or summary" },
+        "timestamp": { "type": "string", "description": "Timestamp ISO string" }
+      },
+      "required": ["id", "userId", "type", "details", "timestamp"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Team workspace configuration and member list.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Workspace ID" },
+        "name": { "type": "string", "description": "Workspace name" },
+        "ownerId": { "type": "string", "description": "Owner user ID" },
+        "members": { "type": "array", "description": "List of member emails or IDs" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "name", "ownerId", "createdAt"]
+    },
+    "BusinessLead": {
+      "title": "BusinessLead",
+      "description": "Enterprise lead inquiries captured from the sales contact form.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Lead ID" },
+        "name": { "type": "string", "description": "Lead contact name" },
+        "email": { "type": "string", "description": "Lead email" },
+        "company": { "type": "string", "description": "Company name" },
+        "teamSize": { "type": "string", "description": "Team size range" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "message": { "type": "string", "description": "Inquiry details" },
+        "date": { "type": "string", "description": "Submission date" },
+        "status": { "type": "string", "description": "Lead status e.g. New, Contacted" }
+      },
+      "required": ["id", "name", "email", "date"]
+    },
+    "PlatformSettings": {
+      "title": "PlatformSettings",
+      "description": "Dynamic pricing, quota allowances, and global platform flags.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Configuration key e.g. pricing" },
+        "plans": { "type": "array", "description": "Configured pricing tiers" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["id", "plans", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents keyed by Firebase Auth UID"
+    },
+    "/user_entitlements/{userId}": {
+      "schema": "UserEntitlements",
+      "description": "User subscription status and operational quotas keyed by Firebase Auth UID"
+    },
+    "/documents/{docId}": {
+      "schema": "ProcessedDocument",
+      "description": "Processed PDF document metadata records"
+    },
+    "/ai_conversations/{convId}": {
+      "schema": "AiConversation",
+      "description": "Saved AI document chats and deep reasoning conversations"
+    },
+    "/usage_events/{eventId}": {
+      "schema": "UsageEvent",
+      "description": "Audit telemetry and activity events for usage tracking"
+    },
+    "/workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Collaborative team workspaces and member access"
+    },
+    "/business_leads/{leadId}": {
+      "schema": "BusinessLead",
+      "description": "Enterprise customer inquiries submitted via sales contact"
+    },
+    "/platform_settings/{settingId}": {
+      "schema": "PlatformSettings",
+      "description": "Dynamic system-wide settings including pricing and quotas"
+    }
+  }
+}

@@ -149,7 +149,7 @@ export const AdminView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 <tr className="hover:bg-slate-50/60">
-                  <td className="py-3 font-semibold text-slate-900">nithonia67@gmail.com</td>
+                  <td className="py-3 font-semibold text-slate-900">{user?.email || 'postkwanza@gmail.com'}</td>
                   <td className="py-3"><span className="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-[10px] font-bold">ADMIN</span></td>
                   <td className="py-3 capitalize">Pro</td>
                   <td className="py-3 tabular-nums">48 ops</td>

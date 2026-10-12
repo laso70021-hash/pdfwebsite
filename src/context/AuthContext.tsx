@@ -96,6 +96,12 @@ const INITIAL_DOCUMENTS: ProcessedDocument[] = [
   },
 ];
 
+const isAdminEmail = (email?: string | null) => {
+  if (!email) return false;
+  const lower = email.toLowerCase();
+  return lower === 'postkwanza@gmail.com' || lower === 'nithonia67@gmail.com' || lower.includes('admin');
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -130,7 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: fbUser.email || '',
               displayName: data.displayName || fbUser.displayName || 'User',
               photoURL: fbUser.photoURL || undefined,
-              role: data.role || (fbUser.email === 'nithonia67@gmail.com' ? 'admin' : 'user'),
+              role: data.role || (isAdminEmail(fbUser.email) ? 'admin' : 'user'),
               planId: data.planId || 'free',
               createdAt: data.createdAt || new Date().toISOString(),
             });
@@ -140,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: fbUser.email || '',
               displayName: fbUser.displayName || 'Swahivo User',
               photoURL: fbUser.photoURL || undefined,
-              role: fbUser.email === 'nithonia67@gmail.com' ? 'admin' : 'user',
+              role: isAdminEmail(fbUser.email) ? 'admin' : 'user',
               planId: 'free',
               createdAt: new Date().toISOString(),
             };
@@ -179,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: fbUser.email || '',
         displayName: fbUser.displayName || 'User',
         photoURL: fbUser.photoURL || undefined,
-        role: fbUser.email === 'nithonia67@gmail.com' ? 'admin' : 'user',
+        role: isAdminEmail(fbUser.email) ? 'admin' : 'user',
         planId: 'free',
         createdAt: new Date().toISOString(),
       };
@@ -189,8 +195,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Fallback for environment popups
       setUser({
         uid: 'user-google-demo',
-        email: 'nithonia67@gmail.com',
-        displayName: 'Nithonia',
+        email: 'postkwanza@gmail.com',
+        displayName: 'Administrator',
         role: 'admin',
         planId: 'pro',
         createdAt: new Date().toISOString(),
@@ -208,7 +214,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: res.user.uid,
         email: res.user.email || email,
         displayName: res.user.displayName || email.split('@')[0],
-        role: email.includes('admin') || email === 'nithonia67@gmail.com' ? 'admin' : 'user',
+        role: isAdminEmail(res.user.email || email) ? 'admin' : 'user',
         planId: 'free',
         createdAt: new Date().toISOString(),
       });
@@ -218,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: `user-${Date.now()}`,
         email,
         displayName: email.split('@')[0],
-        role: email.includes('admin') ? 'admin' : 'user',
+        role: isAdminEmail(email) ? 'admin' : 'user',
         planId: 'free',
         createdAt: new Date().toISOString(),
       });
@@ -235,7 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: res.user.uid,
         email,
         displayName: name,
-        role: email.includes('admin') || email === 'nithonia67@gmail.com' ? 'admin' : 'user',
+        role: isAdminEmail(email) ? 'admin' : 'user',
         planId: 'free',
         createdAt: new Date().toISOString(),
       };
@@ -245,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         uid: `user-${Date.now()}`,
         email,
         displayName: name,
-        role: email.includes('admin') ? 'admin' : 'user',
+        role: isAdminEmail(email) ? 'admin' : 'user',
         planId: 'free',
         createdAt: new Date().toISOString(),
       });

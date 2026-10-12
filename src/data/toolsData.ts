@@ -146,6 +146,15 @@ export const ALL_PDF_TOOLS: PdfToolDefinition[] = [
     color: 'from-violet-700 to-purple-800',
   },
   {
+    id: 'ocr',
+    name: 'OCR Scanned PDF',
+    category: 'ai',
+    description: 'Extract and recognize text and tables from scanned image PDFs with AI.',
+    isPopular: true,
+    isAi: true,
+    color: 'from-blue-600 to-indigo-700',
+  },
+  {
     id: 'ai-qa',
     name: 'PDF Q&A and Quiz',
     category: 'ai',

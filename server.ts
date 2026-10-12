@@ -21,7 +21,14 @@ function getGenAIClient(): GoogleGenAI {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY environment variable is not configured');
   }
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({
+    apiKey,
+    httpOptions: {
+      headers: {
+        'User-Agent': 'aistudio-build',
+      },
+    },
+  });
 }
 
 // Health check endpoint
@@ -40,7 +47,14 @@ async function generateWithFallback(
   primaryModel: string,
   options: { contents: any; config?: any }
 ) {
-  const models = [primaryModel, 'gemini-3.5-flash', 'gemini-3.1-flash-lite'];
+  const candidateModels = [
+    primaryModel,
+    'gemini-3.8-flash',
+    'gemini-3.5-flash',
+    'gemini-3.1-flash-lite',
+  ];
+  // Deduplicate in case primaryModel is in the list
+  const models = Array.from(new Set(candidateModels));
   let lastError: any = null;
 
   for (const model of models) {
@@ -52,7 +66,7 @@ async function generateWithFallback(
       return { response, modelUsed: model };
     } catch (err: any) {
       lastError = err;
-      console.warn(`Model ${model} unavailable, attempting fallback:`, err.message);
+      console.warn(`Model ${model} unavailable (${err?.status || err?.message || 'error'}), attempting fallback...`);
     }
   }
 
@@ -136,7 +150,7 @@ ${safeText ? `\nDocument Content:\n${safeText}` : ''}`;
       ];
     }
 
-    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.5-flash', {
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
       contents: contentsPayload,
       config: {
         systemInstruction,
@@ -205,7 +219,7 @@ ${truncatedDoc ? `\nDocument Content:\n"""\n${truncatedDoc}\n"""` : ''}`;
       parts: userParts,
     });
 
-    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.5-flash', {
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
       contents,
       config: {
         systemInstruction,
@@ -263,22 +277,19 @@ ${query}`;
       ];
     }
 
-    // Use gemini-3.1-pro-preview with thinkingLevel HIGH as instructed
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
+    // Resilient deep reasoning with gemini-3.8-flash & fallback
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
       contents: thinkingContents,
       config: {
         systemInstruction,
-        thinkingConfig: {
-          thinkingLevel: 'HIGH' as any,
-        },
+        temperature: 0.2,
       },
     });
 
     res.json({
       success: true,
       analysis: response.text || '',
-      modelUsed: 'gemini-3.1-pro-preview (Thinking: HIGH)',
+      modelUsed: `${modelUsed} (Deep Reasoning)`,
     });
   } catch (error: any) {
     console.error('Error in /api/ai/thinking:', error);
@@ -300,8 +311,7 @@ app.post('/api/ai/multimodal', async (req, res) => {
     const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '');
     const ai = getGenAIClient();
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
       contents: [
         {
           role: 'user',
@@ -324,7 +334,7 @@ app.post('/api/ai/multimodal', async (req, res) => {
     res.json({
       success: true,
       result: response.text || '',
-      modelUsed: 'gemini-3.1-pro-preview (Multimodal Vision)',
+      modelUsed: `${modelUsed} (Multimodal Vision)`,
     });
   } catch (error: any) {
     console.error('Error in /api/ai/multimodal:', error);
@@ -333,6 +343,84 @@ app.post('/api/ai/multimodal', async (req, res) => {
     });
   }
 });
+
+// Dedicated Optical Character Recognition (OCR) Engine Endpoint
+const handleOcrRequest = async (req: express.Request, res: express.Response) => {
+  try {
+    const { imageBase64, mimeType = 'image/jpeg', pdfBase64, pageNumber = 1 } = req.body;
+
+    if (!imageBase64 && !pdfBase64) {
+      res.status(400).json({ error: 'Either imageBase64 or pdfBase64 is required for OCR processing' });
+      return;
+    }
+
+    const ai = getGenAIClient();
+    const systemInstruction = `You are the Swahivo High-Accuracy Optical Character Recognition (OCR) Engine.
+Your task is to transcribe all text, numbers, tables, lists, and headings from the provided scanned document page with 100% fidelity.
+Strict Guidelines:
+1. Faithfully extract every word, number, date, currency, and punctuation mark. Never truncate or guess.
+2. Maintain natural reading order and document structure.
+3. Reconstruct tables cleanly using standard Markdown table syntax (| Header 1 | Header 2 |).
+4. Identify headings and format them with #, ##, or ###.
+5. Format bullet or numbered lists with standard prefixes (- or 1.).
+6. Separate distinct paragraphs with blank lines.
+7. Return ONLY the transcribed text content and tables. NEVER include markdown code fences (\`\`\`), preambles, notes, or explanations like "Here is the OCR output:".`;
+
+    const ocrPrompt = 'Transcribe all visible text, paragraphs, headings, and tables in this scanned page accurately.';
+
+    let inlinePart: any;
+    if (imageBase64) {
+      const cleanBase64 = imageBase64.replace(/^data:[^;]+;base64,/, '');
+      inlinePart = {
+        inlineData: {
+          mimeType,
+          data: cleanBase64,
+        },
+      };
+    } else {
+      const cleanPdf = pdfBase64.replace(/^data:[^;]+;base64,/, '');
+      inlinePart = {
+        inlineData: {
+          mimeType: 'application/pdf',
+          data: cleanPdf,
+        },
+      };
+    }
+
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: ocrPrompt }, inlinePart],
+        },
+      ],
+      config: {
+        systemInstruction,
+        temperature: 0.1, // low temperature for maximum fidelity
+      },
+    });
+
+    const recognizedText = (response.text || '').trim();
+    const words = recognizedText.split(/\s+/).filter(Boolean);
+
+    res.json({
+      success: true,
+      text: recognizedText,
+      pageNumber: Number(pageNumber) || 1,
+      wordCount: words.length,
+      characterCount: recognizedText.length,
+      modelUsed: `${modelUsed} (Swahivo OCR Engine)`,
+    });
+  } catch (error: any) {
+    console.error('Error in OCR processing:', error);
+    res.status(500).json({
+      error: error.message || 'Failed to complete optical character recognition',
+    });
+  }
+};
+
+app.post('/api/ai/ocr', handleOcrRequest);
+app.post('/api/ocr', handleOcrRequest);
 
 // Document Comparison Endpoint
 app.post('/api/ai/compare', async (req, res) => {
@@ -357,8 +445,7 @@ ${docA.slice(0, 25000)}
 ${docB.slice(0, 25000)}
 `;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const { response, modelUsed } = await generateWithFallback(ai, 'gemini-3.8-flash', {
       contents: prompt,
       config: {
         temperature: 0.2,
@@ -368,7 +455,7 @@ ${docB.slice(0, 25000)}
     res.json({
       success: true,
       comparison: response.text || '',
-      modelUsed: 'gemini-3.8-flash',
+      modelUsed,
     });
   } catch (error: any) {
     console.error('Error in /api/ai/compare:', error);

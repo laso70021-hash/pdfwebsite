@@ -165,9 +165,12 @@ export const AiPdfStudio: React.FC<{ onOpenPricing: () => void }> = ({ onOpenPri
       if (data.success) {
         setAnalysisResult(data.result);
         await consumeAiQuota(`AI ${task}`);
+      } else {
+        setAnalysisResult(`⚠️ Error: ${data.error || 'Failed to process document with Gemini AI'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setAnalysisResult(`⚠️ Network or server error: ${e?.message || 'Could not connect to AI service'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -192,9 +195,12 @@ export const AiPdfStudio: React.FC<{ onOpenPricing: () => void }> = ({ onOpenPri
       if (data.success) {
         setThinkingResult(data.analysis);
         await consumeAiQuota('Deep Thinking Reasoning');
+      } else {
+        setThinkingResult(`⚠️ Error: ${data.error || 'Failed to complete deep reasoning analysis'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setThinkingResult(`⚠️ Network or server error: ${e?.message || 'Could not connect to reasoning engine'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -220,9 +226,12 @@ export const AiPdfStudio: React.FC<{ onOpenPricing: () => void }> = ({ onOpenPri
       if (data.success) {
         setVisionResult(data.result);
         await consumeAiQuota('Multimodal Photo OCR');
+      } else {
+        setVisionResult(`⚠️ Error: ${data.error || 'Failed to inspect image with Gemini Vision'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setVisionResult(`⚠️ Network or server error: ${e?.message || 'Could not inspect image'}`);
     } finally {
       setIsGenerating(false);
     }
@@ -247,9 +256,12 @@ export const AiPdfStudio: React.FC<{ onOpenPricing: () => void }> = ({ onOpenPri
       if (data.success) {
         setCompareResult(data.comparison);
         await consumeAiQuota('Compare Documents');
+      } else {
+        setCompareResult(`⚠️ Error: ${data.error || 'Failed to compare documents'}`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setCompareResult(`⚠️ Network or server error: ${e?.message || 'Could not compare documents'}`);
     } finally {
       setIsGenerating(false);
     }

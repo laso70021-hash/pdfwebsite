@@ -93,6 +93,7 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
   const [resultFileName, setResultFileName] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successStats, setSuccessStats] = useState<any>(null);
+  const [showTextPreview, setShowTextPreview] = useState(false);
 
   // Tool Specific Configurations
   // 1. Split
@@ -504,13 +505,28 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
       }
 
       // 11. OFFICE CONVERSIONS
-      else if (activeToolId === 'pdf-to-word') {
-        setProgress(50);
-        setProgressStage('Synthesizing docx structure...');
-        const res = await pdfToWord(files[0]);
+      else if (activeToolId === 'pdf-to-word' || activeToolId === 'ocr') {
+        setProgress(15);
+        setProgressStage('Validating PDF format & structure...');
+        const res = await pdfToWord(files[0], (p) => {
+          setProgress(p.percent);
+          setProgressStage(p.stage);
+        });
         setResultBlob(res.docxBlob);
         setResultFileName(res.filename);
-        stats = { format: 'Microsoft Word Document (.docx)' };
+        stats = {
+          format: 'Microsoft Word Document (.docx)',
+          originalFilename: files[0].name,
+          pagesProcessed: res.pageCount,
+          totalWords: res.totalWords,
+          isScanned: res.isScanned,
+          ocrApplied: res.ocrApplied,
+          ocrPagesCount: res.ocrPagesCount,
+          hasHeadings: res.hasHeadings,
+          hasTables: res.hasTables,
+          textPreview: res.textPreview,
+          status: 'Office Open XML Validated',
+        };
         setSuccessStats(stats);
         await consumePdfQuota(tool.name, res.filename, res.docxBlob.size);
         triggerSuccessCelebration();
@@ -613,6 +629,7 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
     setResultBytes(null);
     setResultBlob(null);
     setSuccessStats(null);
+    setShowTextPreview(false);
     setErrorMsg('');
     setProgress(0);
   };
@@ -1519,6 +1536,31 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
 
               {/* Specific Result Metrics Cards */}
               <div className="flex flex-wrap items-center justify-center gap-3">
+                {successStats?.originalFilename && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-800 shadow-2xs">
+                    <span className="text-slate-400 font-normal">Source:</span> {successStats.originalFilename}
+                  </div>
+                )}
+
+                {successStats?.pagesProcessed !== undefined && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-emerald-800 shadow-2xs">
+                    {successStats.pagesProcessed} Page{successStats.pagesProcessed > 1 ? 's' : ''} Processed
+                  </div>
+                )}
+
+                {successStats?.totalWords !== undefined && successStats.totalWords > 0 && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
+                    {successStats.totalWords.toLocaleString()} Words Reconstructed
+                  </div>
+                )}
+
+                {successStats?.status && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-emerald-700 shadow-2xs flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{successStats.status}</span>
+                  </div>
+                )}
+
                 {successStats?.savingsPct !== undefined && (
                   <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-emerald-800 shadow-2xs">
                     <span className="text-emerald-600 font-extrabold text-sm">
@@ -1547,6 +1589,25 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
                   </div>
                 )}
 
+                {successStats?.hasTables && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-blue-700 shadow-2xs flex items-center gap-1.5">
+                    <span>📊 Converted to Word Tables</span>
+                  </div>
+                )}
+
+                {successStats?.ocrApplied && (
+                  <div className="bg-white border border-blue-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-blue-700 shadow-2xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>🔍 AI OCR Recognized ({successStats.ocrPagesCount || 1} Scanned Page{(successStats.ocrPagesCount || 1) > 1 ? 's' : ''})</span>
+                  </div>
+                )}
+
+                {successStats?.hasHeadings && (
+                  <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-purple-700 shadow-2xs flex items-center gap-1.5">
+                    <span>📑 Heading Styles Applied (H1-H3)</span>
+                  </div>
+                )}
+
                 {successStats?.encrypted && (
                   <div className="bg-white border border-emerald-200 px-4 py-2.5 rounded-xl text-xs font-semibold text-emerald-800 shadow-2xs flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-emerald-600" />
@@ -1555,6 +1616,45 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
                 )}
               </div>
 
+              {/* Scanned PDF OCR Notice */}
+              {successStats?.ocrApplied ? (
+                <div className="max-w-xl mx-auto p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5 text-left shadow-2xs">
+                  <Sparkles className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">AI Optical Character Recognition (OCR) Applied:</strong> Scanned pages without vector glyphs ({successStats.ocrPagesCount || 1} page{(successStats.ocrPagesCount || 1) > 1 ? 's' : ''}) were automatically analyzed and transcribed into editable Word paragraphs, headings, and tables with formatting preserved.
+                  </div>
+                </div>
+              ) : successStats?.isScanned && (
+                <div className="max-w-xl mx-auto p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 flex items-start gap-2.5 text-left">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong className="font-bold">Layout Preserved:</strong> Document pages compiled and verified for Microsoft Word.
+                  </div>
+                </div>
+              )}
+
+              {/* Optional Text Preview Accordion (Collapsed by Default) */}
+              {successStats?.textPreview && (
+                <div className="mt-2 text-left max-w-2xl mx-auto border border-slate-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setShowTextPreview(!showTextPreview)}
+                    className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100/80 flex items-center justify-between text-xs font-semibold text-slate-700 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Preview Extracted Text & Layout (Optional)</span>
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${showTextPreview ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showTextPreview && (
+                    <div className="p-4 bg-slate-50/50 border-t border-slate-200 max-h-56 overflow-y-auto font-mono text-[11px] text-slate-700 whitespace-pre-wrap leading-relaxed select-text">
+                      {successStats.textPreview}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Download & Secondary Buttons */}
               <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
@@ -1562,7 +1662,13 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
                   className="w-full sm:w-auto px-7 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download Processed File</span>
+                  <span>
+                    {activeToolId === 'pdf-to-word'
+                      ? 'Download Word Document (.docx)'
+                      : activeToolId === 'pdf-to-excel'
+                      ? 'Download Excel Spreadsheet (.xlsx)'
+                      : 'Download Processed File'}
+                  </span>
                 </button>
 
                 <button
@@ -1570,7 +1676,7 @@ export const PdfToolWorkspace: React.FC<PdfToolWorkspaceProps> = ({
                   className="w-full sm:w-auto px-5 py-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Process Another File</span>
+                  <span>{activeToolId === 'pdf-to-word' ? 'Convert Another File' : 'Process Another File'}</span>
                 </button>
               </div>
 

@@ -1,6 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -8,10 +13,12 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     function isAdmin() {
-      return isAuthenticated() && 
-        (request.auth.token.email == 'nithonia67@gmail.com' || 
-         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+      return isAuthenticated() && (
+        request.auth.token.email in ['postkwanza@gmail.com', 'nithonia67@gmail.com'] ||
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid))) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
     }
 
     match /users/{userId} {

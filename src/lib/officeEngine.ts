@@ -1,7 +1,24 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import mammoth from 'mammoth';
-import { Document as DocxDocument, Paragraph, TextRun, HeadingLevel, Packer } from 'docx';
+import {
+  Document as DocxDocument,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  Packer,
+  PageBreak,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  BorderStyle,
+  AlignmentType,
+} from 'docx';
 import * as XLSX from 'xlsx';
+import { convertPdfToDocx, PdfToWordResult } from './pdfToWordConverter';
+
+export { convertPdfToDocx };
+export type { PdfToWordResult };
 
 /**
  * Converts a .docx Word document to a clean formatted PDF
@@ -61,60 +78,11 @@ export async function wordToPdf(file: File): Promise<{ pdfBytes: Uint8Array; pag
 /**
  * Converts a PDF to an authentic Microsoft Word (.docx) document
  */
-export async function pdfToWord(file: File): Promise<{ docxBlob: Blob; filename: string }> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
-  const title = pdfDoc.getTitle() || file.name.replace(/\.[^/.]+$/, '');
-  const pageCount = pdfDoc.getPageCount();
-
-  const paragraphs: Paragraph[] = [
-    new Paragraph({
-      text: title,
-      heading: HeadingLevel.TITLE,
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: `Converted from PDF by Swahivo Document Engine (${pageCount} pages)`,
-          italics: true,
-          color: '666666',
-        }),
-      ],
-    }),
-    new Paragraph({ text: '' }),
-  ];
-
-  // Add structured paragraphs reflecting document pages
-  for (let i = 1; i <= pageCount; i++) {
-    paragraphs.push(
-      new Paragraph({
-        text: `--- Page ${i} ---`,
-        heading: HeadingLevel.HEADING_2,
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `[Text and formatting extracted from page ${i} preserved for editing in Word]`,
-            size: 22,
-          }),
-        ],
-      }),
-      new Paragraph({ text: '' })
-    );
-  }
-
-  const doc = new DocxDocument({
-    sections: [
-      {
-        properties: {},
-        children: paragraphs,
-      },
-    ],
-  });
-
-  const docxBlob = await Packer.toBlob(doc);
-  const outName = `${file.name.replace(/\.[^/.]+$/, '')}.docx`;
-  return { docxBlob, filename: outName };
+export async function pdfToWord(
+  file: File,
+  onProgress?: (progress: { currentPage: number; totalPages: number; percent: number; stage: string }) => void
+): Promise<PdfToWordResult> {
+  return await convertPdfToDocx(file, onProgress);
 }
 
 /**
