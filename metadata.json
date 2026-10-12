@@ -1,0 +1,6 @@
+{
+  "name": "Swahivo - AI-Powered PDF & Document SaaS",
+  "description": "All-in-one PDF platform to merge, split, compress, convert, edit, and analyze documents with Google Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
